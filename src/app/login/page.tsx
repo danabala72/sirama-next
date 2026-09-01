@@ -1,0 +1,3 @@
+import { GraduationCap } from "lucide-react";
+import { LoginForm } from "./login-form";
+export default function LoginPage() { return <main className="grid min-h-screen place-items-center bg-slate-100 p-5"><section className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"><div className="bg-emerald-700 px-8 py-8 text-center text-white"><GraduationCap className="mx-auto mb-3" size={48}/><h1 className="text-2xl font-bold">SIRAMA</h1><p className="mt-1 text-sm text-emerald-100">Sistem Informasi Rekognisi Pembelajaran Lampau</p></div><div className="p-8"><h2 className="mb-6 text-xl font-bold text-slate-800">Masuk ke akun Anda</h2><LoginForm/></div></section></main>; }
