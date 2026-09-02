@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum JenisKelamin {
+  L
+  P
+}
+
+enum StatusPerkawinan {
+  BelumKawin @map("Belum Kawin")
+  Kawin
+}
+
+model Role {
+  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  role      String    @unique @db.VarChar(255)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+  users     User[]
+
+  @@map("roles")
+}
+
+model User {
+  id              BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  roleId          BigInt        @map("role_id") @db.UnsignedBigInt
+  jurusanId       BigInt?       @map("jurusan_id") @db.UnsignedBigInt
+  skemaId         BigInt?       @map("skema_id") @db.UnsignedBigInt
+  username        String        @unique @db.VarChar(255)
+  email           String?       @unique @db.VarChar(255)
+  emailVerifiedAt DateTime?     @map("email_verified_at") @db.Timestamp(0)
+  password        String        @db.VarChar(255)
+  rememberToken   String?       @map("remember_token") @db.VarChar(100)
+  createdAt       DateTime?     @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime?     @map("updated_at") @db.Timestamp(0)
+  role            Role          @relation(fields: [roleId], references: [id])
+  jurusan         Jurusan?      @relation(fields: [jurusanId], references: [id])
+  skema           Skema?        @relation(fields: [skemaId], references: [id])
+  mahasiswa       Mahasiswa?
+  asesor          Asesor?
+  adminJurusan    AdminJurusan?
+
+  @@map("users")
+}
+
+model Jurusan {
+  id           BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  kodeJurusan  String       @map("kode_jurusan") @db.VarChar(255)
+  namaJurusan  String       @map("nama_jurusan") @db.VarChar(255)
+  ketuaJurusan String?      @map("ketua_jurusan") @db.VarChar(255)
+  createdAt    DateTime?    @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?    @map("updated_at") @db.Timestamp(0)
+  users        User[]
+  mataKuliah   MataKuliah[]
+  skema        Skema[]
+
+  @@map("jurusan")
+}
+
+model Skema {
+  id         BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  jurusanId  BigInt            @map("jurusan_id") @db.UnsignedBigInt
+  namaSkema  String            @map("nama_skema") @db.VarChar(255)
+  deskripsi  String?           @db.Text
+  createdAt  DateTime?         @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime?         @map("updated_at") @db.Timestamp(0)
+  jurusan    Jurusan           @relation(fields: [jurusanId], references: [id])
+  users      User[]
+  mataKuliah SkemaMataKuliah[]
+
+  @@map("skema")
+}
+
+model Mahasiswa {
+  id                BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  userId            BigInt              @unique @map("user_id") @db.UnsignedBigInt
+  nim               String?             @db.VarChar(255)
+  name              String              @db.VarChar(255)
+  tempatLahir       String              @map("tempat_lahir") @db.VarChar(255)
+  tanggalLahir      DateTime            @map("tgl_lahir") @db.Date
+  jenisKelamin      JenisKelamin        @map("jenis_kelamin")
+  statusPerkawinan  StatusPerkawinan    @default(BelumKawin) @map("status_perkawinan")
+  kebangsaan        String              @db.VarChar(255)
+  alamatRumah       String              @map("alamat_rumah") @db.VarChar(255)
+  kodePos           String              @map("kode_pos") @db.VarChar(255)
+  noHp              String              @map("no_hp") @db.VarChar(255)
+  alamatKantor      String              @map("alamat_kantor") @db.VarChar(255)
+  email             String              @db.VarChar(255)
+  namaSekolah       String?             @map("nama_sekolah") @db.VarChar(255)
+  alamatSekolah     String?             @map("alamat_sekolah") @db.VarChar(255)
+  tahunLulusSekolah Int?                @map("tahun_lulus_sekolah")
+  namaPt            String?             @map("nama_pt") @db.VarChar(255)
+  prodiPt           String?             @map("prodi_pt") @db.VarChar(255)
+  programPt         String?             @map("program_pt") @db.VarChar(255)
+  tahunLulusPt      Int?                @map("tahun_lulus_pt")
+  isEditable        Boolean             @default(true) @map("is_editable")
+  createdAt         DateTime?           @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime?           @map("updated_at") @db.Timestamp(0)
+  user              User                @relation(fields: [userId], references: [id])
+  mataKuliahPilihan MataKuliahPilihan[]
+  asesorLinks       AsesorMahasiswa[]
+
+  @@map("mahasiswa")
+}
+
+model Asesor {
+  id                 BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  userId             BigInt                       @unique @map("user_id") @db.UnsignedBigInt
+  name               String                       @db.VarChar(255)
+  signature          String?                      @db.VarChar(255)
+  createdAt          DateTime?                    @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime?                    @map("updated_at") @db.Timestamp(0)
+  user               User                         @relation(fields: [userId], references: [id])
+  mahasiswaLinks     AsesorMahasiswa[]
+  penilaianFormal    PenilaianTransferSks[]
+  penilaianNonformal PenilaianTransferNonformal[]
+
+  @@map("asesor")
+}
+
+model AdminJurusan {
+  id           BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  userId       BigInt        @unique @map("user_id") @db.UnsignedBigInt
+  nama         String        @db.VarChar(255)
+  jenisKelamin JenisKelamin? @map("jenis_kelamin")
+  email        String?       @db.VarChar(255)
+  noHp         String?       @map("no_hp") @db.VarChar(255)
+  createdAt    DateTime?     @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?     @map("updated_at") @db.Timestamp(0)
+  user         User          @relation(fields: [userId], references: [id])
+
+  @@map("admin_jurusan")
+}
+
+model AsesorMahasiswa {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  mahasiswaId BigInt    @map("mahasiswa_id") @db.UnsignedBigInt
+  asesorId    BigInt    @map("asesor_id") @db.UnsignedBigInt
+  createdAt   DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime? @map("updated_at") @db.Timestamp(0)
+  mahasiswa   Mahasiswa @relation(fields: [mahasiswaId], references: [id])
+  asesor      Asesor    @relation(fields: [asesorId], references: [id])
+
+  @@unique([mahasiswaId, asesorId])
+  @@map("asesor_mahasiswa")
+}
+
+model MataKuliah {
+  id           BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  jurusanId    BigInt               @map("jurusan_id") @db.UnsignedBigInt
+  kodeMk       String               @map("kode_mk") @db.VarChar(255)
+  namaMk       String               @map("nama_mk") @db.VarChar(255)
+  sks          Int
+  nilaiMinimum Int?                 @map("nilai_minimum")
+  status       Boolean              @default(true)
+  createdAt    DateTime?            @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?            @map("updated_at") @db.Timestamp(0)
+  jurusan      Jurusan              @relation(fields: [jurusanId], references: [id])
+  semester     MataKuliahSemester[]
+  skema        SkemaMataKuliah[]
+
+  @@map("mata_kuliah")
+}
+
+model Semester {
+  id         BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  kode       String               @db.VarChar(255)
+  label      String               @db.VarChar(255)
+  isActive   Boolean              @default(false) @map("is_active")
+  createdAt  DateTime?            @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime?            @map("updated_at") @db.Timestamp(0)
+  mataKuliah MataKuliahSemester[]
+
+  @@map("semester")
+}
+
+model MataKuliahSemester {
+  id           BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahId BigInt              @map("mata_kuliah_id") @db.UnsignedBigInt
+  semesterId   BigInt              @map("semester_id") @db.UnsignedBigInt
+  createdAt    DateTime?           @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?           @map("updated_at") @db.Timestamp(0)
+  mataKuliah   MataKuliah          @relation(fields: [mataKuliahId], references: [id])
+  semester     Semester            @relation(fields: [semesterId], references: [id])
+  pilihan      MataKuliahPilihan[]
+
+  @@unique([mataKuliahId, semesterId])
+  @@map("mata_kuliah_semester")
+}
+
+model SkemaMataKuliah {
+  id           BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahId BigInt     @map("mata_kuliah_id") @db.UnsignedBigInt
+  skemaId      BigInt     @map("skema_id") @db.UnsignedBigInt
+  createdAt    DateTime?  @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?  @map("updated_at") @db.Timestamp(0)
+  mataKuliah   MataKuliah @relation(fields: [mataKuliahId], references: [id])
+  skema        Skema      @relation(fields: [skemaId], references: [id])
+
+  @@unique([mataKuliahId, skemaId])
+  @@map("mata_kuliah_skema")
+}
+
+model MataKuliahPilihan {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  mahasiswaId          BigInt                 @map("mahasiswa_id") @db.UnsignedBigInt
+  mataKuliahSemesterId BigInt?                @map("mata_kuliah_semester_id") @db.UnsignedBigInt
+  kodeMk               String?                @map("kode_mk") @db.VarChar(255)
+  namaMk               String?                @map("nama_mk") @db.VarChar(255)
+  nilaiAngka           Decimal?               @map("nilai_angka") @db.Decimal(5, 2)
+  nilaiHuruf           String?                @map("nilai_huruf") @db.VarChar(10)
+  sks                  Int?
+  createdAt            DateTime?              @map("created_at") @db.Timestamp(0)
+  updatedAt            DateTime?              @map("updated_at") @db.Timestamp(0)
+  mahasiswa            Mahasiswa              @relation(fields: [mahasiswaId], references: [id])
+  mataKuliahSemester   MataKuliahSemester?    @relation(fields: [mataKuliahSemesterId], references: [id])
+  transferSks          TransferSks[]
+  transferNonformal    TransferSksNonformal[]
+
+  @@map("mata_kuliah_pilihan")
+}
+
+// Array disengaja: database lama memiliki banyak duplikasi untuk satu MK pilihan.
+// Service layer memilih record canonical yang memiliki penilaian; jangan ubah ke 1:1
+// sebelum rekonsiliasi selesai.
+model TransferSks {
+  id                  BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahPilihanId BigInt                 @map("mata_kuliah_pilihan_id") @db.UnsignedBigInt
+  kodeMkAsal          String                 @map("kode_mk_asal") @db.VarChar(255)
+  namaMkAsal          String                 @map("nama_mk_asal") @db.VarChar(255)
+  createdAt           DateTime?              @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime?              @map("updated_at") @db.Timestamp(0)
+  mataKuliahPilihan   MataKuliahPilihan      @relation(fields: [mataKuliahPilihanId], references: [id])
+  penilaian           PenilaianTransferSks[]
+
+  @@index([mataKuliahPilihanId])
+  @@map("transfer_sks")
+}
+
+model PenilaianTransferSks {
+  id            BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  transferSksId BigInt      @map("transfer_sks_id") @db.UnsignedBigInt
+  asesorId      BigInt      @map("asesor_id") @db.UnsignedBigInt
+  kesenjangan   String?     @db.Text
+  hasil         Int?
+  catatanAsesor String?     @map("catatan_asesor") @db.Text
+  createdAt     DateTime?   @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime?   @map("updated_at") @db.Timestamp(0)
+  transferSks   TransferSks @relation(fields: [transferSksId], references: [id])
+  asesor        Asesor      @relation(fields: [asesorId], references: [id])
+
+  @@unique([transferSksId, asesorId], map: "unique_transfer_asesor")
+  @@map("penilaian_transfer_sks")
+}
+
+model TransferSksNonformal {
+  id                  BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahPilihanId BigInt                       @map("mata_kuliah_pilihan_id") @db.UnsignedBigInt
+  createdAt           DateTime?                    @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime?                    @map("updated_at") @db.Timestamp(0)
+  mataKuliahPilihan   MataKuliahPilihan            @relation(fields: [mataKuliahPilihanId], references: [id])
+  penilaian           PenilaianTransferNonformal[]
+
+  @@index([mataKuliahPilihanId])
+  @@map("transfer_sks_nonformal")
+}
+
+model PenilaianTransferNonformal {
+  id                  BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  transferNonformalId BigInt               @map("transfer_nonformal_id") @db.UnsignedBigInt
+  asesorId            BigInt               @map("asesor_id") @db.UnsignedBigInt
+  kesenjangan         String?              @db.Text
+  nilai               Int?
+  catatanAsesor       String?              @map("catatan_asesor") @db.Text
+  createdAt           DateTime?            @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime?            @map("updated_at") @db.Timestamp(0)
+  transferNonformal   TransferSksNonformal @relation(fields: [transferNonformalId], references: [id])
+  asesor              Asesor               @relation(fields: [asesorId], references: [id])
+
+  @@unique([transferNonformalId, asesorId], map: "unique_nonformal_asesor")
+  @@map("penilaian_transfer_nonformal")
+}
