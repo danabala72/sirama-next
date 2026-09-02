@@ -113,6 +113,9 @@ model Asesor {
   id                 BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
   userId             BigInt                       @unique @map("user_id") @db.UnsignedBigInt
   name               String                       @db.VarChar(255)
+  jenisKelamin       JenisKelamin?                @map("jenis_kelamin")
+  email              String?                      @db.VarChar(255)
+  noHp               String?                      @map("no_hp") @db.VarChar(255)
   signature          String?                      @db.VarChar(255)
   createdAt          DateTime?                    @map("created_at") @db.Timestamp(0)
   updatedAt          DateTime?                    @map("updated_at") @db.Timestamp(0)
@@ -189,9 +192,22 @@ model MataKuliahSemester {
   mataKuliah   MataKuliah          @relation(fields: [mataKuliahId], references: [id])
   semester     Semester            @relation(fields: [semesterId], references: [id])
   pilihan      MataKuliahPilihan[]
+  capaian      CpMataKuliah[]
 
   @@unique([mataKuliahId, semesterId])
   @@map("mata_kuliah_semester")
+}
+
+model CpMataKuliah {
+  id                    BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahSemesterId  BigInt    @map("mata_kuliah_semester_id") @db.UnsignedBigInt
+  indikatorCapaian      String    @map("indikator_capaian") @db.Text
+  createdAt             DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt             DateTime? @map("updated_at") @db.Timestamp(0)
+  mataKuliahSemester    MataKuliahSemester @relation(fields: [mataKuliahSemesterId], references: [id])
+
+  @@index([mataKuliahSemesterId])
+  @@map("cp_mata_kuliah")
 }
 
 model SkemaMataKuliah {
