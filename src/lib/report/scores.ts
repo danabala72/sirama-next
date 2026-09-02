@@ -16,9 +16,9 @@ export type FinalScore = {
 function scoreForKind(item: AssessorScore, kind: ReportKind) {
   if (kind === "formal") return item.formal;
   if (kind === "nonformal") return item.nonformal;
-
-  const available = [item.formal, item.nonformal].filter((value): value is number => value !== null);
-  return available.length ? available.reduce((sum, value) => sum + value, 0) / available.length : null;
+  if (item.formal !== null) return Math.min(item.formal + ((item.nonformal ?? 0) * 0.1), 85);
+  if (item.nonformal !== null) return Math.min(item.nonformal, 85);
+  return null;
 }
 
 /**
