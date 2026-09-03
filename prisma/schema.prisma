@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 enum JenisKelamin {
@@ -199,12 +199,12 @@ model MataKuliahSemester {
 }
 
 model CpMataKuliah {
-  id                    BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  mataKuliahSemesterId  BigInt    @map("mata_kuliah_semester_id") @db.UnsignedBigInt
-  indikatorCapaian      String    @map("indikator_capaian") @db.Text
-  createdAt             DateTime? @map("created_at") @db.Timestamp(0)
-  updatedAt             DateTime? @map("updated_at") @db.Timestamp(0)
-  mataKuliahSemester    MataKuliahSemester @relation(fields: [mataKuliahSemesterId], references: [id])
+  id                   BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahSemesterId BigInt             @map("mata_kuliah_semester_id") @db.UnsignedBigInt
+  indikatorCapaian     String             @map("indikator_capaian") @db.Text
+  createdAt            DateTime?          @map("created_at") @db.Timestamp(0)
+  updatedAt            DateTime?          @map("updated_at") @db.Timestamp(0)
+  mataKuliahSemester   MataKuliahSemester @relation(fields: [mataKuliahSemesterId], references: [id])
 
   @@index([mataKuliahSemesterId])
   @@map("cp_mata_kuliah")

@@ -12,6 +12,7 @@
 
 # Production build artifacts
 /build
+/src/generated/prisma
 
 # Debug logs
 npm-debug.log*
@@ -28,3 +29,5 @@ pnpm-debug.log*
 # TypeScript cache
 *.tsbuildinfo
 next-env.d.ts
+.env*
+.pnpm-store

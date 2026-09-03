@@ -16,7 +16,8 @@ export type FinalScore = {
 function scoreForKind(item: AssessorScore, kind: ReportKind) {
   if (kind === "formal") return item.formal;
   if (kind === "nonformal") return item.nonformal;
-  if (item.formal !== null) return Math.min(item.formal + ((item.nonformal ?? 0) * 0.1), 85);
+  if (item.formal !== null)
+    return Math.min(item.formal + (item.nonformal ?? 0) * 0.1, 85);
   if (item.nonformal !== null) return Math.min(item.nonformal, 85);
   return null;
 }
@@ -32,16 +33,24 @@ export function calculateThreeAssessorScore(
   kind: ReportKind,
 ): FinalScore {
   const assessorIds = assignedAssessorIds.slice(0, 3);
-  const indexed = new Map(scores.map((score) => [score.assessorId.toString(), score]));
+  const indexed = new Map(
+    scores.map((score) => [score.assessorId.toString(), score]),
+  );
   const assessorScores = assessorIds.map((id) => {
     const item = indexed.get(id.toString());
     return item ? scoreForKind(item, kind) : null;
   });
-  const filled = assessorScores.filter((value): value is number => value !== null);
+  const filled = assessorScores.filter(
+    (value): value is number => value !== null,
+  );
 
   return {
     assessorScores,
-    average: filled.length ? Math.round((filled.reduce((sum, value) => sum + value, 0) / filled.length) * 100) / 100 : null,
+    average: filled.length
+      ? Math.round(
+          (filled.reduce((sum, value) => sum + value, 0) / filled.length) * 100,
+        ) / 100
+      : null,
     complete: assessorIds.length === 3 && filled.length === 3,
     filledAssessors: filled.length,
   };

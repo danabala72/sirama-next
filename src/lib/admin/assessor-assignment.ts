@@ -6,15 +6,17 @@ type AssignmentActor = {
   jurusanId: bigint | null;
 };
 
-/** Assigns exactly three distinct assessors without touching assessment rows. */
+/** Assigns distinct assessors without touching assessment rows. */
 export async function assignThreeAssessors(
   actor: AssignmentActor,
   studentId: bigint,
   assessorIds: readonly bigint[],
 ) {
   const distinctIds = [...new Set(assessorIds.map(String))].map(BigInt);
-  if (distinctIds.length !== 3) throw new Error("Satu mahasiswa wajib memiliki tepat tiga asesor berbeda.");
-  if (actor.role === "AdminJurusan" && actor.jurusanId === null) throw new Error("Admin Jurusan belum terhubung ke jurusan.");
+  if (!distinctIds.length)
+    throw new Error("Pilih minimal satu asesor untuk mahasiswa.");
+  if (actor.role === "AdminJurusan" && actor.jurusanId === null)
+    throw new Error("Admin Jurusan belum terhubung ke jurusan.");
 
   return prisma.$transaction(async (tx) => {
     const student = await tx.mahasiswa.findUnique({
@@ -22,19 +24,21 @@ export async function assignThreeAssessors(
       include: { user: { select: { jurusanId: true } } },
     });
     if (!student) throw new Error("Mahasiswa tidak ditemukan.");
-    if (actor.role === "AdminJurusan" && student.user.jurusanId !== actor.jurusanId) {
-      throw new Error("Admin Jurusan tidak memiliki akses ke mahasiswa dari jurusan lain.");
+    if (
+      actor.role === "AdminJurusan" &&
+      student.user.jurusanId !== actor.jurusanId
+    ) {
+      throw new Error(
+        "Admin Jurusan tidak memiliki akses ke mahasiswa dari jurusan lain.",
+      );
     }
 
     const assessors = await tx.asesor.findMany({
       where: { id: { in: distinctIds } },
       include: { user: { select: { jurusanId: true } } },
     });
-    if (assessors.length !== 3) throw new Error("Salah satu profil asesor tidak ditemukan.");
-    if (assessors.some((assessor) => assessor.user.jurusanId !== student.user.jurusanId)) {
-      throw new Error("Ketiga asesor harus berasal dari jurusan yang sama dengan mahasiswa.");
-    }
-
+    if (assessors.length !== distinctIds.length)
+      throw new Error("Salah satu profil asesor tidak ditemukan.");
     // Pivot penugasan boleh diganti; seluruh nilai historis pada penilaian_* tetap utuh.
     await tx.asesorMahasiswa.deleteMany({
       where: { mahasiswaId: studentId, asesorId: { notIn: distinctIds } },
@@ -47,6 +51,9 @@ export async function assignThreeAssessors(
       });
     }
 
-    return tx.asesorMahasiswa.findMany({ where: { mahasiswaId: studentId }, orderBy: { asesorId: "asc" } });
+    return tx.asesorMahasiswa.findMany({
+      where: { mahasiswaId: studentId },
+      orderBy: { asesorId: "asc" },
+    });
   });
 }
