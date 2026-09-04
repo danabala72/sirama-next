@@ -1,0 +1,53 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sirama_staging_mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sirama_staging}
+      MYSQL_USER: ${MYSQL_USER:-sirama}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ganti_password_staging}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ganti_root_password}
+      TZ: Asia/Makassar
+    ports:
+      - "${MYSQL_PORT:-3317}:3306"
+    volumes:
+      - sirama_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - sirama_network
+
+  next:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sirama_staging_next
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-sirama}:${MYSQL_PASSWORD:-ganti_password_staging}@mysql:3306/${MYSQL_DATABASE:-sirama_staging}
+      SESSION_SECRET: ${SESSION_SECRET:-ganti_dengan_random_secret_minimal_32_karakter}
+      NODE_ENV: production
+      TZ: Asia/Makassar
+    ports:
+      - "${APP_PORT:-3107}:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - sirama_network
+
+volumes:
+  sirama_mysql_data:
+    name: sirama_staging_mysql_data
+
+networks:
+  sirama_network:
+    name: sirama_staging_network
