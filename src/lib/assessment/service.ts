@@ -236,3 +236,190 @@ export async function saveAssessment(input: SaveAssessmentInput) {
         });
   });
 }
+
+export async function getAssessmentReview(assessorId: bigint, studentId: bigint) {
+  const assignment = await prisma.asesorMahasiswa.findFirst({
+    where: { asesorId: assessorId, mahasiswaId: studentId },
+    include: {
+      mahasiswa: {
+        include: {
+          user: { include: { jurusan: true, skema: true } },
+          mataKuliahPilihan: {
+            include: {
+              mataKuliahSemester: {
+                include: { mataKuliah: true, semester: true },
+              },
+              attachments: { include: { attachment: true } },
+              cpLevels: {
+                include: {
+                  cpMataKuliah: true,
+                  penilaian: { where: { asesorId: assessorId } },
+                },
+              },
+              transferSks: {
+                include: {
+                  cpmkItems: true,
+                  penilaian: { where: { asesorId: assessorId } },
+                },
+              },
+              transferNonformal: {
+                include: { penilaian: { where: { asesorId: assessorId } } },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!assignment) throw new Error("Mahasiswa tidak ditugaskan kepada asesor ini.");
+
+  const student = assignment.mahasiswa;
+  return {
+    student: {
+      id: student.id.toString(),
+      name: student.name,
+      nim: student.nim,
+      username: student.user.username,
+      jurusan: student.user.jurusan?.namaJurusan ?? "-",
+      skema: student.user.skema?.namaSkema ?? "-",
+    },
+    courses: student.mataKuliahPilihan.map((course) => {
+      const formal = selectCanonicalTransfer(
+        course.transferSks.map((transfer) => ({
+          id: transfer.id,
+          source: transfer,
+          assessments: transfer.penilaian.map((assessment) => ({
+            id: assessment.id,
+            assessorId: assessment.asesorId,
+            score: assessment.hasil,
+            updatedAt: assessment.updatedAt,
+          })),
+        })),
+        assessorId,
+      );
+      const nonformal = selectCanonicalTransfer(
+        course.transferNonformal.map((transfer) => ({
+          id: transfer.id,
+          source: transfer,
+          assessments: transfer.penilaian.map((assessment) => ({
+            id: assessment.id,
+            assessorId: assessment.asesorId,
+            score: assessment.nilai,
+            updatedAt: assessment.updatedAt,
+          })),
+        })),
+        assessorId,
+      );
+      const formalAssessment = formal?.transfer.source.penilaian.find(
+        (item) => item.id === formal.assessment?.id,
+      );
+      const nonformalAssessment = nonformal?.transfer.source.penilaian.find(
+        (item) => item.id === nonformal.assessment?.id,
+      );
+      return {
+        id: course.id.toString(),
+        kode:
+          course.mataKuliahSemester?.mataKuliah.kodeMk ?? course.kodeMk ?? "-",
+        nama:
+          course.mataKuliahSemester?.mataKuliah.namaMk ?? course.namaMk ?? "-",
+        sks: course.mataKuliahSemester?.mataKuliah.sks ?? course.sks,
+        semester: course.mataKuliahSemester?.semester.label ?? "Riwayat lama",
+        attachments: course.attachments.map(({ attachment }) => ({
+          id: attachment.id.toString(),
+          label: attachment.label,
+          fileName: attachment.fileName,
+          filePath: attachment.filePath,
+          fileType: attachment.fileType,
+        })),
+        cpmkAsal: formal?.transfer.source.cpmkItems.map((item) => item.cpmk) ?? [],
+        competencies: course.cpLevels.map((level) => ({
+          id: level.id.toString(),
+          indicator: level.cpMataKuliah.indikatorCapaian,
+          claimed: level.levelKompetensi,
+          verification: level.penilaian[0]
+            ? {
+                valid: level.penilaian[0].valid,
+                asli: level.penilaian[0].asli,
+                terkini: level.penilaian[0].terkini,
+                memadai: level.penilaian[0].memadai,
+              }
+            : null,
+        })),
+        formal: formalAssessment
+          ? {
+              score: formalAssessment.hasil,
+              gapAnalysis: formalAssessment.kesenjangan ?? "",
+              assessorNote: formalAssessment.catatanAsesor ?? "",
+            }
+          : null,
+        nonformal: nonformalAssessment
+          ? {
+              score: nonformalAssessment.nilai,
+              gapAnalysis: nonformalAssessment.kesenjangan ?? "",
+              assessorNote: nonformalAssessment.catatanAsesor ?? "",
+            }
+          : null,
+        duplicateCount:
+          (formal?.duplicateCount ?? 0) + (nonformal?.duplicateCount ?? 0),
+        hasConflict:
+          Boolean(formal?.hasConflictingScores) ||
+          Boolean(nonformal?.hasConflictingScores),
+      };
+    }),
+  };
+}
+
+export async function saveCompetencyVerification(input: {
+  assessorId: bigint;
+  studentId: bigint;
+  selectedCourseId: bigint;
+  items: Array<{
+    cpLevelId: bigint;
+    valid: boolean;
+    asli: boolean;
+    terkini: boolean;
+    memadai: boolean;
+  }>;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const assignment = await tx.asesorMahasiswa.findFirst({
+      where: { asesorId: input.assessorId, mahasiswaId: input.studentId },
+      select: { id: true },
+    });
+    if (!assignment) throw new Error("Mahasiswa tidak ditugaskan kepada asesor ini.");
+    const validLevels = await tx.cpLevelKompetensi.findMany({
+      where: {
+        id: { in: input.items.map((item) => item.cpLevelId) },
+        mataKuliahPilihanId: input.selectedCourseId,
+        mataKuliahPilihan: { mahasiswaId: input.studentId },
+      },
+      select: { id: true },
+    });
+    if (validLevels.length !== input.items.length)
+      throw new Error("Data CPMK tidak sesuai dengan mahasiswa atau mata kuliah.");
+    for (const item of input.items) {
+      await tx.penilaianCpKompetensi.upsert({
+        where: {
+          cpLevelKompetensiId_asesorId: {
+            cpLevelKompetensiId: item.cpLevelId,
+            asesorId: input.assessorId,
+          },
+        },
+        update: {
+          valid: item.valid,
+          asli: item.asli,
+          terkini: item.terkini,
+          memadai: item.memadai,
+        },
+        create: {
+          cpLevelKompetensiId: item.cpLevelId,
+          asesorId: input.assessorId,
+          valid: item.valid,
+          asli: item.asli,
+          terkini: item.terkini,
+          memadai: item.memadai,
+        },
+      });
+    }
+  });
+}
