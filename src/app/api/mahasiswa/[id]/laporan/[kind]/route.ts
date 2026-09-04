@@ -61,7 +61,7 @@ export async function GET(
   const sheet = workbook.addWorksheet(`Asesmen ${kind}`);
   sheet.eachRow((row) => { row.font = { name: "Calibri", size: 8 }; });
   const logo = await readFile(path.join(process.cwd(), "public", "logo.png"));
-  const logoId = workbook.addImage({ buffer: logo as any, extension: "png" });
+  const logoId = workbook.addImage({ base64: `data:image/png;base64,${logo.toString("base64")}`, extension: "png" });
   sheet.addImage(logoId, { tl: { col: 5, row: 6 }, ext: { width: 65, height: 65 } });
   sheet.getCell("A1").value = kind === "formal"
     ? "FORMULIR REKAPITULASI HASIL ASESMEN UNTUK PROGRAM STUDI (FORMAL)"

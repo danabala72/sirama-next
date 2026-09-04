@@ -56,7 +56,7 @@ export function AssessorSelect({
       form?.removeEventListener("reset", onReset);
       control.destroy();
     };
-  }, [assessors]);
+  }, [assessors, selected]);
 
   return (
     <select ref={ref} name="asesorIds" multiple defaultValue={selected}>
