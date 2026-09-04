@@ -7,16 +7,22 @@ import {
   inputClass,
 } from "@/components/admin-ui";
 import { FormModal, ModalEditButton } from "@/components/form-modal";
+import { CpmkImportForm } from "@/components/cpmk-import-form";
 import { requireManager } from "@/lib/admin/access";
 import { prisma } from "@/lib/prisma";
-import { deactivateMataKuliah, saveMataKuliah } from "../admin-actions";
+import {
+  deactivateMataKuliah,
+  deleteCpmk,
+  saveCpmk,
+  saveMataKuliah,
+} from "../admin-actions";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; cpmk?: string }>;
 }) {
   const a = await requireManager(),
-    { notice } = await searchParams,
+    { notice, cpmk } = await searchParams,
     where =
       a.role === "AdminJurusan" ? { jurusanId: a.jurusanIdBigInt! } : undefined;
   const [rows, jurusan, semester, skema] = await Promise.all([
@@ -24,7 +30,7 @@ export default async function Page({
       where,
       include: {
         jurusan: true,
-        semester: { include: { semester: true } },
+        semester: { include: { semester: true, capaian: { orderBy: { id: "asc" } } } },
         skema: { include: { skema: true } },
       },
       orderBy: { kodeMk: "asc" },
@@ -38,6 +44,12 @@ export default async function Page({
       orderBy: { namaSkema: "asc" },
     }),
   ]);
+  const selectedCourse = /^\d+$/.test(cpmk ?? "")
+    ? rows.find((row) => row.id === BigInt(cpmk!))
+    : undefined;
+  const activeOffering = selectedCourse?.semester.find(
+    (item) => item.semester.isActive,
+  );
   return (
     <>
       <PageHeader
@@ -179,6 +191,12 @@ export default async function Page({
                         <button className={dangerClass}>Nonaktifkan</button>
                       </form>
                     )}
+                    <a
+                      href={`/mata-kuliah?cpmk=${r.id.toString()}`}
+                      className={buttonClass}
+                    >
+                      Kelola CPMK
+                    </a>
                   </div>
                 </td>
               </tr>
@@ -187,6 +205,118 @@ export default async function Page({
           </tbody>
         </table>
       </div>
+      {selectedCourse && (
+        <section className="mt-6 rounded-lg border bg-white p-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold">
+                CPMK — {selectedCourse.kodeMk} {selectedCourse.namaMk}
+              </h2>
+              <p className="text-sm text-slate-600">
+                {activeOffering
+                  ? `Semester aktif: ${activeOffering.semester.label}`
+                  : "Mata kuliah ini belum ditawarkan pada semester aktif."}
+              </p>
+            </div>
+            <a href="/mata-kuliah" className="text-sm font-semibold underline">
+              Tutup
+            </a>
+          </div>
+
+          {activeOffering ? (
+            <>
+              <form action={saveCpmk} className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]">
+                <input type="hidden" name="mataKuliahId" value={selectedCourse.id.toString()} />
+                <input
+                  type="hidden"
+                  name="mataKuliahSemesterId"
+                  value={activeOffering.id.toString()}
+                />
+                <textarea
+                  name="indikatorCapaian"
+                  className={inputClass}
+                  rows={3}
+                  placeholder="Contoh: Mahasiswa mampu menganalisis kompleksitas algoritma..."
+                  required
+                />
+                <button className={buttonClass}>Tambah CPMK</button>
+              </form>
+              <div className="mb-5 overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-left">
+                    <tr>
+                      <th className="p-3">No.</th>
+                      <th className="p-3">Indikator capaian</th>
+                      <th className="p-3">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeOffering.capaian.map((item, index) => (
+                      <tr key={item.id.toString()} className="border-t align-top">
+                        <td className="p-3">{index + 1}</td>
+                        <td className="p-3">{item.indikatorCapaian}</td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-2">
+                            <details>
+                              <summary className={`${buttonClass} cursor-pointer list-none`}>
+                                Edit
+                              </summary>
+                              <form action={saveCpmk} className="mt-2 grid min-w-72 gap-2">
+                                <input type="hidden" name="id" value={item.id.toString()} />
+                                <input type="hidden" name="mataKuliahId" value={selectedCourse.id.toString()} />
+                                <input type="hidden" name="mataKuliahSemesterId" value={activeOffering.id.toString()} />
+                                <textarea
+                                  name="indikatorCapaian"
+                                  defaultValue={item.indikatorCapaian}
+                                  className={inputClass}
+                                  rows={3}
+                                  required
+                                />
+                                <button className={buttonClass}>Simpan Perubahan</button>
+                              </form>
+                            </details>
+                            <form action={deleteCpmk}>
+                              <input type="hidden" name="id" value={item.id.toString()} />
+                              <input type="hidden" name="mataKuliahId" value={selectedCourse.id.toString()} />
+                              <button className={dangerClass}>Hapus</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!activeOffering.capaian.length && <EmptyRow colSpan={3} />}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <p className="mb-5 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+              Tambahkan semester aktif ke penawaran mata kuliah sebelum mengisi CPMK.
+            </p>
+          )}
+          <CpmkImportForm kodeMk={selectedCourse.kodeMk} />
+
+          {selectedCourse.semester.some(
+            (item) => !item.semester.isActive && item.capaian.length,
+          ) && (
+            <div className="mt-5">
+              <h3 className="mb-2 font-semibold">Riwayat CPMK semester lain</h3>
+              {selectedCourse.semester
+                .filter((item) => !item.semester.isActive && item.capaian.length)
+                .map((offering) => (
+                  <div key={offering.id.toString()} className="mb-3 rounded-md border p-3">
+                    <div className="mb-1 text-sm font-semibold">{offering.semester.label}</div>
+                    <ol className="list-decimal space-y-1 pl-5 text-sm">
+                      {offering.capaian.map((item) => (
+                        <li key={item.id.toString()}>{item.indikatorCapaian}</li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+            </div>
+          )}
+        </section>
+      )}
     </>
   );
 }
