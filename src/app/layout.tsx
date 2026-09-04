@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "SIRAMA",
   description: "Sistem Informasi Rekognisi Pembelajaran Lampau",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon-v1.ico",
   },
 };
 
