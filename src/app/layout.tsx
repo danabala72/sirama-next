@@ -6,6 +6,9 @@ import "tom-select/dist/css/tom-select.css";
 export const metadata: Metadata = {
   title: "SIRAMA",
   description: "Sistem Informasi Rekognisi Pembelajaran Lampau",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
