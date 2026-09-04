@@ -18,8 +18,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@11.19.0 --activate
+      - name: Install pnpm
+        run: npm install --global pnpm@11.19.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prisma generate
       - run: pnpm exec tsc --noEmit --pretty false
