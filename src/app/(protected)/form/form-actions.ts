@@ -135,10 +135,11 @@ export async function saveStep3(data: FormData) {
     const offering = await prisma.mataKuliahSemester.findUniqueOrThrow({
       where: { id: offeringId }, include: { mataKuliah: { include: { skema: true } } },
     });
-    if (offering.mataKuliah.jurusanId !== student.user.jurusanId)
-      throw new Error("Mata kuliah tidak sesuai dengan jurusan Anda.");
-    const allowed = !student.user.skemaId || !offering.mataKuliah.skema.length ||
-      offering.mataKuliah.skema.some((item) => item.skemaId === student.user.skemaId);
+    const allowed = student.user.skemaId
+      ? offering.mataKuliah.jurusanId === student.user.jurusanId &&
+        offering.mataKuliah.skema.some((item) => item.skemaId === student.user.skemaId)
+      : offering.mataKuliah.jurusanId === student.user.jurusanId &&
+        offering.mataKuliah.skema.length === 0;
     if (!allowed) throw new Error("Mata kuliah tidak sesuai dengan skema Anda.");
     const score = Number(value(data, "nilaiAngka"));
     if (!Number.isFinite(score) || score < 0 || score > 100)

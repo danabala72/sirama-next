@@ -1,4 +1,5 @@
-import { GraduationCap, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
@@ -10,7 +11,7 @@ export default function LoginPage() {
           <div className="absolute -bottom-40 -left-28 h-96 w-96 rounded-full bg-[#5f8edb]/30" />
           <div className="relative">
             <div className="mb-8 grid h-16 w-16 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25">
-              <GraduationCap size={38} />
+              <Image src="/logo.png" alt="Logo Politeknik Negeri Bali" width={52} height={52} className="object-contain" />
             </div>
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-100">
               Politeknik Negeri Bali
@@ -32,7 +33,7 @@ export default function LoginPage() {
           <div className="w-full">
             <div className="mb-9 md:hidden">
               <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-[#214b97] text-white">
-                <GraduationCap size={32} />
+                <Image src="/logo.png" alt="Logo Politeknik Negeri Bali" width={44} height={44} className="object-contain" />
               </div>
               <p className="text-sm font-semibold text-[#285aae]">
                 Politeknik Negeri Bali

@@ -45,6 +45,15 @@ export async function buildAssessmentReport(
   });
   if (!student) throw new Error("Mahasiswa tidak ditemukan.");
 
+  const catalog = await prisma.mataKuliahSemester.findMany({
+    where: {
+      semester: { isActive: true },
+      mataKuliah: { status: true, jurusanId: student.user.jurusanId! },
+    },
+    include: { semester: true, mataKuliah: true },
+    orderBy: [{ semesterId: "asc" }, { mataKuliah: { kodeMk: "asc" } }],
+  });
+
   const assessorIds = student.asesorLinks
     .map((link) => link.asesorId)
     .slice(0, 3);
@@ -132,11 +141,32 @@ export async function buildAssessmentReport(
     },
   );
 
+  const existingCodes = new Set(rows.map((row) => row.courseCode));
+  for (const item of catalog) {
+    if (existingCodes.has(item.mataKuliah.kodeMk)) continue;
+    rows.push({
+      selectedCourseId: `catalog-${item.id}`,
+      semester: item.semester.label,
+      courseCode: item.mataKuliah.kodeMk,
+      courseName: item.mataKuliah.namaMk,
+      selfScore: null,
+      assessorScores: assessorIds.map(() => null),
+      average: null,
+      complete: false,
+      duplicateTransfers: 0,
+      conflictingScores: false,
+    });
+  }
+
   return {
     student: {
       id: student.id.toString(),
       nim: student.nim,
       name: student.name,
+      alamat: student.alamatRumah,
+      noHp: student.noHp,
+      email: student.email,
+      namaSekolah: student.namaSekolah,
     },
     jurusan: student.user.jurusan,
     skema: student.user.skema,

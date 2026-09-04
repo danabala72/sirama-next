@@ -697,6 +697,7 @@ export async function saveMahasiswa(fd: FormData) {
       email = s(fd, "email"),
       password = passwordFrom(fd),
       name = s(fd, "name"),
+      isEditable = fd.get("isEditable") === "on",
       nim = s(fd, "nim") || null,
       key = s(fd, "id"),
       skemaId = s(fd, "skemaId") ? BigInt(s(fd, "skemaId")) : null;
@@ -746,6 +747,7 @@ export async function saveMahasiswa(fd: FormData) {
           data: {
             nim,
             name,
+            isEditable,
             email,
             noHp: s(fd, "noHp") || old.noHp,
             jenisKelamin: (s(fd, "jenisKelamin") || old.jenisKelamin) as

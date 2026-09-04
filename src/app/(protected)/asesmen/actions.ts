@@ -39,8 +39,6 @@ export async function saveAssessmentAction(formData: FormData) {
     if (scoreText === "") throw new Error("Nilai wajib diisi.");
     if (gapAnalysis.length < 5)
       throw new Error("Analisis kesenjangan minimal 5 karakter.");
-    if (assessorNote.length < 5)
-      throw new Error("Catatan asesor minimal 5 karakter.");
     await saveAssessment({
       assessorId: await assessorIdentity(),
       studentId: BigInt(studentId),

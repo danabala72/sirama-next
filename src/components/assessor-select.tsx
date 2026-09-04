@@ -24,6 +24,7 @@ export function AssessorSelect({
       placeholder: "Cari dan pilih asesor",
       closeAfterSelect: false,
     });
+    control.setValue(selected);
     const jurusanSelect = select.form?.querySelector<HTMLSelectElement>(
       '[name="jurusanId"]',
     );
@@ -33,12 +34,12 @@ export function AssessorSelect({
       control.clearOptions();
       control.addOption(
         assessors
-          .filter((assessor) => assessor.jurusanId === jurusanId)
+          .filter((assessor) => assessor.jurusanId === jurusanId || selected.includes(assessor.id))
           .map((assessor) => ({ value: assessor.id, text: assessor.name })),
       );
       control.setValue(
         (Array.isArray(selectedValues) ? selectedValues : [selectedValues]).filter(
-          (value) => assessors.some((assessor) => assessor.id === value && assessor.jurusanId === jurusanId),
+          (value) => assessors.some((assessor) => assessor.id === value && (assessor.jurusanId === jurusanId || selected.includes(assessor.id))),
         ),
       );
     };
@@ -47,8 +48,12 @@ export function AssessorSelect({
       filter();
     };
     jurusanSelect?.addEventListener("change", onJurusanChange);
+    const form = select.form;
+    const onReset = () => setTimeout(() => control.setValue(selected), 0);
+    form?.addEventListener("reset", onReset);
     return () => {
       jurusanSelect?.removeEventListener("change", onJurusanChange);
+      form?.removeEventListener("reset", onReset);
       control.destroy();
     };
   }, [assessors]);

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   BookOpenCheck,
@@ -8,6 +9,7 @@ import {
   GraduationCap,
   Home,
   Menu,
+  LogOut,
   School,
   Settings,
   ShieldCheck,
@@ -111,8 +113,8 @@ export function AppShell({
             href="/"
             className="flex min-w-0 flex-1 items-center gap-2 bg-[#285aae] px-3 sm:max-w-[330px] sm:gap-3 sm:px-4"
           >
-            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-white/50 sm:size-10">
-              <GraduationCap size={22} />
+            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-white/50 bg-white sm:size-10">
+              <Image src="/logo.png" alt="Logo" width={32} height={32} className="size-7 object-contain sm:size-8" />
             </span>
             <span className="min-w-0">
               <strong className="block truncate text-xs sm:text-sm">
@@ -121,7 +123,7 @@ export function AppShell({
               <small className="block truncate text-xs text-white/80">Politeknik Negeri Bali</small>
             </span>
           </Link>
-          <div className="flex shrink-0 items-center justify-end gap-2 px-2 sm:gap-3 sm:px-4">
+          <div className="ml-auto flex shrink-0 items-center justify-end gap-2 px-2 sm:gap-3 sm:px-4">
             <button
               onClick={() => setOpen(!open)}
               className="rounded p-2 hover:bg-white/10 lg:hidden"
@@ -133,8 +135,8 @@ export function AppShell({
               Selamat datang, <strong>{username}</strong>
             </span>
             <form action="/logout" method="post">
-              <button className="rounded bg-white px-2.5 py-1.5 text-xs font-semibold text-[#214b97] sm:px-3 sm:text-sm">
-                Log Out
+              <button type="submit" aria-label="Log out" title="Log out" className="rounded bg-white p-2 text-[#214b97] hover:bg-slate-100">
+                <LogOut size={18} aria-hidden="true" />
               </button>
             </form>
           </div>

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   EmptyRow,
   Notice,
@@ -10,7 +9,7 @@ import {
   inputClass,
   readListParams,
 } from "@/components/admin-ui";
-import { FormModal } from "@/components/form-modal";
+import { FormModal, ModalEditButton } from "@/components/form-modal";
 import { TemplateImportForm } from "@/components/template-import-form";
 import { requireManager } from "@/lib/admin/access";
 import { prisma } from "@/lib/prisma";
@@ -18,11 +17,11 @@ import { deleteJurusan, saveJurusan } from "../admin-actions";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string; edit?: string; q?: string; page?: string; perPage?: string }>;
+  searchParams: Promise<{ notice?: string; q?: string; page?: string; perPage?: string }>;
 }) {
   const a = await requireManager();
   const params = await searchParams;
-  const { notice, edit } = params;
+  const { notice } = params;
   const { q, page, perPage, skip, take } = readListParams(params);
   const where = {
     ...(a.role === "AdminJurusan" ? { id: a.jurusanIdBigInt! } : {}),
@@ -45,7 +44,6 @@ export default async function Page({
     }),
     prisma.jurusan.count({ where }),
   ]);
-  const current = edit ? rows.find((x) => x.id.toString() === edit) : undefined;
   return (
     <>
       <PageHeader
@@ -70,41 +68,34 @@ export default async function Page({
           </FormModal>
           <FormModal
             modalId="jurusan-form"
-            key={current?.id.toString() ?? "new"}
-            title={current ? "Edit Jurusan" : "Tambah Jurusan"}
-            triggerLabel={current ? "Edit Jurusan" : "Tambah Jurusan"}
-            initialOpen={Boolean(current)}
+            title="Tambah / Edit Jurusan"
+            triggerLabel="Tambah Jurusan"
             triggerClassName="w-full sm:w-auto"
           >
             <form action={saveJurusan} className="grid gap-3 md:grid-cols-4">
               <input
                 type="hidden"
                 name="id"
-                value={current?.id.toString() ?? ""}
+                defaultValue=""
               />
               <input
                 name="kodeJurusan"
-                defaultValue={current?.kodeJurusan}
                 placeholder="Kode jurusan"
                 className={inputClass}
                 required
               />
               <input
                 name="namaJurusan"
-                defaultValue={current?.namaJurusan}
                 placeholder="Nama jurusan"
                 className={inputClass}
                 required
               />
               <input
                 name="ketuaJurusan"
-                defaultValue={current?.ketuaJurusan ?? ""}
                 placeholder="Ketua jurusan"
                 className={inputClass}
               />
-              <button className={buttonClass}>
-                {current ? "Simpan Perubahan" : "Tambah Jurusan"}
-              </button>
+              <button className={buttonClass}>Simpan Jurusan</button>
             </form>
           </FormModal>
         </div>
@@ -121,9 +112,16 @@ export default async function Page({
             </div>
             {a.role === "Admin" && (
               <div className="mt-3 grid gap-2">
-                <Link href={`/jurusan?edit=${r.id}`} className={`${buttonClass} w-full`}>
-                  Edit
-                </Link>
+                <ModalEditButton
+                  modalId="jurusan-form"
+                  className="w-full"
+                  values={{
+                    id: r.id.toString(),
+                    kodeJurusan: r.kodeJurusan,
+                    namaJurusan: r.namaJurusan,
+                    ketuaJurusan: r.ketuaJurusan ?? "",
+                  }}
+                />
                 <form action={deleteJurusan}>
                   <input type="hidden" name="id" value={r.id.toString()} />
                   <button className={`${dangerClass} w-full`}>Hapus</button>
@@ -157,12 +155,16 @@ export default async function Page({
                 <td className="p-3">
                   {a.role === "Admin" && (
                     <div className="grid gap-2 sm:flex">
-                      <Link
-                        href={`/jurusan?edit=${r.id}`}
-                        className={`${buttonClass} w-full sm:w-auto`}
-                      >
-                        Edit
-                      </Link>
+                      <ModalEditButton
+                        modalId="jurusan-form"
+                        className="w-full sm:w-auto"
+                        values={{
+                          id: r.id.toString(),
+                          kodeJurusan: r.kodeJurusan,
+                          namaJurusan: r.namaJurusan,
+                          ketuaJurusan: r.ketuaJurusan ?? "",
+                        }}
+                      />
                       <form action={deleteJurusan}>
                         <input
                           type="hidden"

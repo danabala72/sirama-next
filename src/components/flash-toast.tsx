@@ -34,10 +34,11 @@ export function FlashToast() {
   }, [message]);
 
   if (!message) return null;
+  const error = message.startsWith("Error:");
   return (
-    <div className="fixed right-4 top-4 z-[60] flex max-w-sm items-start gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm text-emerald-800 shadow-lg" role="status">
+    <div className={`fixed right-4 top-4 z-[60] flex max-w-sm items-start gap-3 rounded-lg border bg-white px-4 py-3 text-sm shadow-lg ${error ? "border-red-200 text-red-800" : "border-emerald-200 text-emerald-800"}`} role="status">
       <span>{message}</span>
-      <button type="button" onClick={dismiss} className="text-emerald-700" aria-label="Tutup notifikasi"><X size={18} /></button>
+      <button type="button" onClick={dismiss} className={error ? "text-red-700" : "text-emerald-700"} aria-label="Tutup notifikasi"><X size={18} /></button>
     </div>
   );
 }

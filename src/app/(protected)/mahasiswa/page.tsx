@@ -11,6 +11,7 @@ import {
 } from "@/components/admin-ui";
 import { FormModal } from "@/components/form-modal";
 import { AssessorSelect } from "@/components/assessor-select";
+import { ReportMenu } from "@/components/report-menu";
 import { TemplateImportForm } from "@/components/template-import-form";
 import { requireManager } from "@/lib/admin/access";
 import { prisma } from "@/lib/prisma";
@@ -57,7 +58,6 @@ export default async function Page({
     prisma.jurusan.findMany({ where: js ? { id: js } : undefined }),
     prisma.skema.findMany({ where: js ? { jurusanId: js } : undefined }),
     prisma.asesor.findMany({
-      where: js ? { user: { jurusanId: js } } : undefined,
       include: { user: true },
       orderBy: { name: "asc" },
     }),
@@ -184,6 +184,10 @@ export default async function Page({
               placeholder="No. HP"
               className={inputClass}
             />
+            <label className="flex items-center gap-2 text-sm md:col-span-2">
+              <input type="checkbox" name="isEditable" defaultChecked={current?.isEditable ?? true} />
+              Izinkan mahasiswa mengedit formulir
+            </label>
             <select
               name="jenisKelamin"
               className={inputClass}
@@ -236,7 +240,15 @@ export default async function Page({
               </div>
             </dl>
             <div className="mt-3 grid gap-2">
-              <Link href={`/mahasiswa?edit=${r.id}`} className={`${buttonClass} w-full`}>
+              <details className="relative">
+                <summary className="cursor-pointer list-none rounded border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50">Laporan</summary>
+                <div className="mt-1 grid gap-1 rounded border border-slate-200 bg-white p-1 text-sm shadow-sm">
+                  <Link href={`/api/mahasiswa/${r.id}/laporan/final`} className="rounded px-3 py-2 text-center hover:bg-slate-50">Final</Link>
+                  <Link href={`/api/mahasiswa/${r.id}/laporan/formal`} className="rounded px-3 py-2 text-center hover:bg-slate-50">Formal</Link>
+                  <Link href={`/api/mahasiswa/${r.id}/laporan/nonformal`} className="rounded px-3 py-2 text-center hover:bg-slate-50">Nonformal</Link>
+                </div>
+              </details>
+              <Link href={`/mahasiswa?edit=${r.id}${q ? `&q=${encodeURIComponent(q)}` : ""}${page > 1 ? `&page=${page}` : ""}${perPage !== 10 ? `&perPage=${perPage}` : ""}`} className={`${buttonClass} w-full`}>
                 Edit
               </Link>
               <form action={deleteMahasiswa}>
@@ -290,8 +302,16 @@ export default async function Page({
                   </td>
                   <td className="p-3">
                     <div className="grid gap-2 sm:flex">
+                      <details className="relative">
+                        <summary className="cursor-pointer list-none rounded border border-slate-200 px-4 py-2 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50">Laporan</summary>
+                        <div className="absolute right-0 z-10 mt-1 grid min-w-32 gap-1 rounded border border-slate-200 bg-white p-1 text-sm shadow-sm">
+                          <Link href={`/api/mahasiswa/${r.id}/laporan/final`} className="rounded px-3 py-2 text-center hover:bg-slate-50">Final</Link>
+                          <Link href={`/api/mahasiswa/${r.id}/laporan/formal`} className="rounded px-3 py-2 text-center hover:bg-slate-50">Formal</Link>
+                          <Link href={`/api/mahasiswa/${r.id}/laporan/nonformal`} className="rounded px-3 py-2 text-center hover:bg-slate-50">Nonformal</Link>
+                        </div>
+                      </details>
                       <Link
-                        href={`/mahasiswa?edit=${r.id}`}
+                        href={`/mahasiswa?edit=${r.id}${q ? `&q=${encodeURIComponent(q)}` : ""}${page > 1 ? `&page=${page}` : ""}${perPage !== 10 ? `&perPage=${perPage}` : ""}`}
                         className={`${buttonClass} w-full sm:w-auto`}
                       >
                         Edit
@@ -318,3 +338,4 @@ export default async function Page({
   );
 }
 import Link from "next/link";
+

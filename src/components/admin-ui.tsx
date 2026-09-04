@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Search } from "lucide-react";
 import { PerPageSelect } from "./per-page-select";
 
 export function PageHeader({
@@ -92,7 +93,20 @@ export function SearchBox({
         placeholder={placeholder}
         className={inputClass}
       />
-      <button className={`${buttonClass} w-full sm:w-auto`}>Cari</button>
+      <button
+        type="submit"
+        aria-label="Cari"
+        title="Cari"
+        className={`${buttonClass} h-9 w-9 p-0`}
+      >
+        <Search
+          size={28}
+          strokeWidth={2.5}
+          className="shrink-0"
+          aria-hidden="true"
+        />
+        <span className="sr-only">Cari</span>
+      </button>
       {q && (
         <Link
           href="?"

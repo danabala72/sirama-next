@@ -1,15 +1,15 @@
 services:
   mysql:
     image: mysql:8.4
-    container_name: sirama_staging_mysql
+    container_name: sirama_mysql
     restart: unless-stopped
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-sirama_staging}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sirama}
       MYSQL_USER: ${MYSQL_USER:-sirama}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ganti_password_staging}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ganti_password}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ganti_root_password}
       TZ: Asia/Makassar
     ports:
@@ -29,15 +29,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: sirama_staging_next
+    container_name: sirama_next
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql://${MYSQL_USER:-sirama}:${MYSQL_PASSWORD:-ganti_password_staging}@mysql:3306/${MYSQL_DATABASE:-sirama_staging}
+      DATABASE_URL: mysql://${MYSQL_USER:-sirama}:${MYSQL_PASSWORD:-ganti_password}@mysql:3306/${MYSQL_DATABASE:-sirama}
       SESSION_SECRET: ${SESSION_SECRET:-ganti_dengan_random_secret_minimal_32_karakter}
       NODE_ENV: production
       TZ: Asia/Makassar
     ports:
       - "${APP_PORT:-3107}:3000"
+    volumes:
+      - sirama_uploads:/app/public/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -46,8 +48,10 @@ services:
 
 volumes:
   sirama_mysql_data:
-    name: sirama_staging_mysql_data
+    name: sirama_mysql_data
+  sirama_uploads:
+    name: sirama_uploads
 
 networks:
   sirama_network:
-    name: sirama_staging_network
+    name: sirama_network
