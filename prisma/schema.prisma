@@ -105,6 +105,7 @@ model Mahasiswa {
   user              User                @relation(fields: [userId], references: [id])
   mataKuliahPilihan MataKuliahPilihan[]
   asesorLinks       AsesorMahasiswa[]
+  attachments       Attachment[]
 
   @@map("mahasiswa")
 }
@@ -123,6 +124,7 @@ model Asesor {
   mahasiswaLinks     AsesorMahasiswa[]
   penilaianFormal    PenilaianTransferSks[]
   penilaianNonformal PenilaianTransferNonformal[]
+  penilaianCp        PenilaianCpKompetensi[]
 
   @@map("asesor")
 }
@@ -167,6 +169,7 @@ model MataKuliah {
   jurusan      Jurusan              @relation(fields: [jurusanId], references: [id])
   semester     MataKuliahSemester[]
   skema        SkemaMataKuliah[]
+  attachments  Attachment[]
 
   @@map("mata_kuliah")
 }
@@ -205,6 +208,7 @@ model CpMataKuliah {
   createdAt            DateTime?          @map("created_at") @db.Timestamp(0)
   updatedAt            DateTime?          @map("updated_at") @db.Timestamp(0)
   mataKuliahSemester   MataKuliahSemester @relation(fields: [mataKuliahSemesterId], references: [id])
+  levelKompetensi      CpLevelKompetensi[]
 
   @@index([mataKuliahSemesterId])
   @@map("cp_mata_kuliah")
@@ -238,6 +242,8 @@ model MataKuliahPilihan {
   mataKuliahSemester   MataKuliahSemester?    @relation(fields: [mataKuliahSemesterId], references: [id])
   transferSks          TransferSks[]
   transferNonformal    TransferSksNonformal[]
+  attachments          MataKuliahAttachment[]
+  cpLevels             CpLevelKompetensi[]
 
   @@map("mata_kuliah_pilihan")
 }
@@ -254,9 +260,88 @@ model TransferSks {
   updatedAt           DateTime?              @map("updated_at") @db.Timestamp(0)
   mataKuliahPilihan   MataKuliahPilihan      @relation(fields: [mataKuliahPilihanId], references: [id])
   penilaian           PenilaianTransferSks[]
+  cpmkItems           TransferSksCpmk[]
 
   @@index([mataKuliahPilihanId])
   @@map("transfer_sks")
+}
+
+model Attachment {
+  id             BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  mahasiswaId    BigInt                    @map("mahasiswa_id") @db.UnsignedBigInt
+  mataKuliahId   BigInt?                   @map("mata_kuliah_id") @db.UnsignedBigInt
+  label          String                    @db.VarChar(255)
+  fileName       String                    @map("file_name") @db.VarChar(255)
+  filePath       String                    @map("file_path") @db.VarChar(255)
+  fileType       String                    @map("file_type") @db.VarChar(255)
+  mimeType       String                    @map("mime_type") @db.VarChar(255)
+  fileSize       BigInt                    @map("file_size") @db.UnsignedBigInt
+  createdAt      DateTime?                 @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime?                 @map("updated_at") @db.Timestamp(0)
+  mahasiswa      Mahasiswa                 @relation(fields: [mahasiswaId], references: [id])
+  mataKuliah     MataKuliah?               @relation(fields: [mataKuliahId], references: [id])
+  mataKuliahLinks MataKuliahAttachment[]
+
+  @@index([mahasiswaId])
+  @@index([mataKuliahId])
+  @@map("attachment")
+}
+
+model MataKuliahAttachment {
+  id                     BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahPilihanId    BigInt              @map("mata_kuliah_pilihan_id") @db.UnsignedBigInt
+  attachmentId           BigInt              @map("attachment_id") @db.UnsignedBigInt
+  createdAt              DateTime?           @map("created_at") @db.Timestamp(0)
+  updatedAt              DateTime?           @map("updated_at") @db.Timestamp(0)
+  mataKuliahPilihan      MataKuliahPilihan   @relation(fields: [mataKuliahPilihanId], references: [id])
+  attachment             Attachment          @relation(fields: [attachmentId], references: [id])
+
+  @@unique([mataKuliahPilihanId, attachmentId])
+  @@map("mata_kuliah_attachment")
+}
+
+model CpLevelKompetensi {
+  id                     BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  mataKuliahPilihanId    BigInt              @map("mata_kuliah_pilihan_id") @db.UnsignedBigInt
+  cpMataKuliahId         BigInt              @map("cp_mata_kuliah_id") @db.UnsignedBigInt
+  levelKompetensi        Boolean?            @map("level_kompetensi")
+  createdAt              DateTime?           @map("created_at") @db.Timestamp(0)
+  updatedAt              DateTime?           @map("updated_at") @db.Timestamp(0)
+  mataKuliahPilihan      MataKuliahPilihan   @relation(fields: [mataKuliahPilihanId], references: [id])
+  cpMataKuliah           CpMataKuliah        @relation(fields: [cpMataKuliahId], references: [id])
+  penilaian              PenilaianCpKompetensi[]
+
+  @@unique([mataKuliahPilihanId, cpMataKuliahId], map: "unik_cp_per_mk")
+  @@map("cp_level_kompetensi")
+}
+
+model PenilaianCpKompetensi {
+  id                    BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  cpLevelKompetensiId   BigInt             @map("cp_level_kompetensi_id") @db.UnsignedBigInt
+  asesorId              BigInt             @map("asesor_id") @db.UnsignedBigInt
+  valid                  Boolean            @default(false)
+  asli                   Boolean            @default(false)
+  terkini                Boolean            @default(false)
+  memadai                Boolean            @default(false)
+  createdAt              DateTime?          @map("created_at") @db.Timestamp(0)
+  updatedAt              DateTime?          @map("updated_at") @db.Timestamp(0)
+  cpLevelKompetensi      CpLevelKompetensi  @relation(fields: [cpLevelKompetensiId], references: [id])
+  asesor                 Asesor             @relation(fields: [asesorId], references: [id])
+
+  @@unique([cpLevelKompetensiId, asesorId], map: "unique_penilaian_cp_asesor")
+  @@map("penilaian_cp_kompetensi")
+}
+
+model TransferSksCpmk {
+  id             BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  transferSksId  BigInt       @map("transfer_sks_id") @db.UnsignedBigInt
+  cpmk           String       @db.Text
+  createdAt      DateTime?    @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime?    @map("updated_at") @db.Timestamp(0)
+  transferSks    TransferSks  @relation(fields: [transferSksId], references: [id])
+
+  @@index([transferSksId])
+  @@map("transfer_sks_cpmk")
 }
 
 model PenilaianTransferSks {
