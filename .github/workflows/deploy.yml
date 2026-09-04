@@ -14,14 +14,12 @@ jobs:
     env:
       DATABASE_URL: mysql://build:build@127.0.0.1:3306/build
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.19.0
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: pnpm
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@11.19.0 --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prisma generate
       - run: pnpm exec tsc --noEmit --pretty false
@@ -31,7 +29,7 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
@@ -45,10 +43,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
-          script_stop: true
           script: |
             set -eu
             cd "${{ secrets.SERVER_APP_DIR }}"
+            test -d .git
             git fetch origin main
             git checkout main
             git reset --hard origin/main
