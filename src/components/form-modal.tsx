@@ -47,10 +47,6 @@ export function FormModal({
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setOpen(initialOpen);
-  }, [initialOpen]);
-
-  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
