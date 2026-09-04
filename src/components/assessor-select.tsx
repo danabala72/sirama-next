@@ -51,7 +51,7 @@ export function AssessorSelect({
       jurusanSelect?.removeEventListener("change", onJurusanChange);
       control.destroy();
     };
-  }, []);
+  }, [assessors]);
 
   return (
     <select ref={ref} name="asesorIds" multiple defaultValue={selected}>
