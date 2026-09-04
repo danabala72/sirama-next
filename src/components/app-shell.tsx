@@ -106,25 +106,25 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-[#eef2f6] text-slate-800">
       <header className="px-2 pt-2 md:px-3 md:pt-3">
-        <div className="flex h-[78px] overflow-hidden rounded-t bg-[#1d4e9a] text-white shadow-sm">
+        <div className="flex min-h-16 overflow-hidden rounded-t bg-[#1d4e9a] text-white shadow-sm md:h-[78px]">
           <Link
             href="/"
-            className="flex w-[330px] max-w-[72%] items-center gap-3 bg-[#285aae] px-4"
+            className="flex min-w-0 flex-1 items-center gap-2 bg-[#285aae] px-3 sm:max-w-[330px] sm:gap-3 sm:px-4"
           >
-            <span className="grid size-10 place-items-center rounded-full border border-white/50">
-              <GraduationCap size={24} />
+            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-white/50 sm:size-10">
+              <GraduationCap size={22} />
             </span>
-            <span>
-              <strong className="block text-sm">
+            <span className="min-w-0">
+              <strong className="block truncate text-xs sm:text-sm">
                 Sistem Rekrutmen Mahasiswa RPL
               </strong>
-              <small className="text-white/80">Politeknik Negeri Bali</small>
+              <small className="block truncate text-xs text-white/80">Politeknik Negeri Bali</small>
             </span>
           </Link>
-          <div className="flex flex-1 items-center justify-end gap-3 px-4">
+          <div className="flex shrink-0 items-center justify-end gap-2 px-2 sm:gap-3 sm:px-4">
             <button
               onClick={() => setOpen(!open)}
-              className="mr-auto rounded p-2 hover:bg-white/10 lg:hidden"
+              className="rounded p-2 hover:bg-white/10 lg:hidden"
               aria-label="Menu"
             >
               {open ? <X /> : <Menu />}
@@ -133,7 +133,7 @@ export function AppShell({
               Selamat datang, <strong>{username}</strong>
             </span>
             <form action="/logout" method="post">
-              <button className="rounded bg-white px-3 py-1.5 text-sm font-semibold text-[#214b97]">
+              <button className="rounded bg-white px-2.5 py-1.5 text-xs font-semibold text-[#214b97] sm:px-3 sm:text-sm">
                 Log Out
               </button>
             </form>

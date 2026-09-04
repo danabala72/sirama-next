@@ -3,13 +3,25 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { buttonClass, inputClass } from "@/components/admin-ui";
+import type { TemplateName } from "@/lib/excel/workbook";
 
-export function CpmkImportForm({
-  kodeMk,
-  onImported,
+type JurusanOption = {
+  id: string;
+  name: string;
+};
+
+export function TemplateImportForm({
+  name,
+  title,
+  description,
+  jurusanOptions = [],
+  requireJurusan = false,
 }: {
-  kodeMk: string;
-  onImported?: () => Promise<void> | void;
+  name: TemplateName;
+  title: string;
+  description: string;
+  jurusanOptions?: JurusanOption[];
+  requireJurusan?: boolean;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -19,8 +31,9 @@ export function CpmkImportForm({
     event.preventDefault();
     setBusy(true);
     setMessage("");
+
     try {
-      const response = await fetch("/api/import/cpmk", {
+      const response = await fetch(`/api/import/${name}`, {
         method: "POST",
         body: new FormData(event.currentTarget),
       });
@@ -31,8 +44,8 @@ export function CpmkImportForm({
         failed?: number;
         errors?: Array<{ row: number; message: string }>;
       };
-      if (!response.ok && response.status !== 207)
-        throw new Error(result.message || "Import CPMK gagal.");
+      if (!response.ok) throw new Error(result.message || "Import gagal.");
+
       const summary = `${result.success ?? 0} dari ${result.total ?? 0} baris berhasil`;
       const firstError = result.errors?.[0];
       setMessage(
@@ -40,23 +53,32 @@ export function CpmkImportForm({
           ? `${summary}. Baris ${firstError.row}: ${firstError.message}`
           : `${summary}.`,
       );
-      if (onImported) await onImported();
-      else router.refresh();
+      router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Import CPMK gagal.");
+      setMessage(error instanceof Error ? error.message : "Import gagal.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-3 rounded-lg border bg-slate-50 p-4">
+    <form onSubmit={submit} className="grid gap-3">
       <div>
-        <div className="font-semibold">Import CPMK</div>
-        <p className="text-sm text-slate-600">
-          File diproses ke semester aktif berdasarkan kolom kode_mk.
-        </p>
+        <div className="font-semibold">{title}</div>
+        <p className="text-sm text-slate-600">{description}</p>
       </div>
+      {requireJurusan && (
+        <select className={inputClass} name="jurusan_id" required defaultValue="">
+          <option value="" disabled>
+            Pilih jurusan
+          </option>
+          {jurusanOptions.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      )}
       <input
         className={inputClass}
         type="file"
@@ -66,13 +88,13 @@ export function CpmkImportForm({
       />
       <div className="flex flex-wrap items-center gap-3">
         <button className={buttonClass} disabled={busy}>
-          {busy ? "Mengimpor..." : "Import CPMK"}
+          {busy ? "Mengimpor..." : "Import"}
         </button>
         <a
           className="text-sm font-semibold text-blue-700 underline"
-          href={`/api/templates/cpmk?kode_mk=${encodeURIComponent(kodeMk)}`}
+          href={`/api/templates/${name}`}
         >
-          Unduh template CPMK
+          Unduh template
         </a>
       </div>
       {message && <p className="text-sm text-slate-700">{message}</p>}

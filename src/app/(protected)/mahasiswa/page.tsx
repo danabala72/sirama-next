@@ -1,33 +1,59 @@
 import {
   EmptyRow,
   Notice,
+  Pagination,
   PageHeader,
+  SearchBox,
   buttonClass,
   dangerClass,
   inputClass,
+  readListParams,
 } from "@/components/admin-ui";
 import { FormModal } from "@/components/form-modal";
 import { AssessorSelect } from "@/components/assessor-select";
+import { TemplateImportForm } from "@/components/template-import-form";
 import { requireManager } from "@/lib/admin/access";
 import { prisma } from "@/lib/prisma";
 import { deleteMahasiswa, saveMahasiswa } from "../admin-actions";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string; edit?: string }>;
+  searchParams: Promise<{ notice?: string; edit?: string; q?: string; page?: string; perPage?: string }>;
 }) {
   const a = await requireManager(),
-    { notice, edit } = await searchParams,
-    js = a.role === "AdminJurusan" ? a.jurusanIdBigInt! : undefined;
-  const [rows, jurusan, skema, asesor] = await Promise.all([
+    params = await searchParams,
+    { notice, edit } = params,
+    { q, page, perPage, skip, take } = readListParams(params),
+    js = a.role === "AdminJurusan" ? a.jurusanIdBigInt! : undefined,
+    where = {
+      ...(js ? { user: { jurusanId: js } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { nim: { contains: q } },
+              { name: { contains: q } },
+              { email: { contains: q } },
+              { noHp: { contains: q } },
+              { user: { username: { contains: q } } },
+              { user: { email: { contains: q } } },
+              { user: { jurusan: { namaJurusan: { contains: q } } } },
+              { user: { skema: { namaSkema: { contains: q } } } },
+            ],
+          }
+        : {}),
+    };
+  const [rows, total, jurusan, skema, asesor] = await Promise.all([
     prisma.mahasiswa.findMany({
-      where: js ? { user: { jurusanId: js } } : undefined,
+      where,
       include: {
         user: { include: { jurusan: true, skema: true } },
-        asesorLinks: { include: { asesor: true } },
+        asesorLinks: { include: { asesor: true }, orderBy: { asesorId: "asc" } },
       },
       orderBy: { name: "asc" },
+      skip,
+      take,
     }),
+    prisma.mahasiswa.count({ where }),
     prisma.jurusan.findMany({ where: js ? { id: js } : undefined }),
     prisma.skema.findMany({ where: js ? { jurusanId: js } : undefined }),
     prisma.asesor.findMany({
@@ -46,13 +72,40 @@ export default async function Page({
         description="Buat akun, tugaskan asesor, dan pertahankan seluruh riwayat nilai."
       />
       <Notice text={notice} />
-      <div className="flex justify-end">
+      <div className="mb-3 grid gap-2 sm:flex sm:justify-end">
+        <FormModal
+          modalId="mahasiswa-import"
+          title="Import Mahasiswa"
+          triggerLabel="Import Mahasiswa"
+          dialogClassName="max-w-xl"
+          triggerClassName="w-full sm:w-auto"
+        >
+          <TemplateImportForm
+            name="mahasiswa"
+            title="Import Mahasiswa"
+            description="Buat atau perbarui akun mahasiswa dari template Excel."
+          />
+        </FormModal>
+        <FormModal
+          modalId="nim-import"
+          title="Import NIM"
+          triggerLabel="Import NIM"
+          dialogClassName="max-w-xl"
+          triggerClassName="w-full sm:w-auto"
+        >
+          <TemplateImportForm
+            name="nim"
+            title="Import NIM"
+            description="Isi NIM mahasiswa berdasarkan username yang sudah ada."
+          />
+        </FormModal>
         <FormModal
           modalId="mahasiswa-form"
           key={current?.id.toString() ?? "new"}
           title={current ? "Edit Mahasiswa" : "Tambah Mahasiswa"}
           triggerLabel={current ? "Edit Mahasiswa" : "Tambah Mahasiswa"}
           initialOpen={Boolean(current)}
+          triggerClassName="w-full sm:w-auto"
         >
           <form action={saveMahasiswa} className="grid gap-3 md:grid-cols-4">
             <input
@@ -155,7 +208,51 @@ export default async function Page({
           </form>
         </FormModal>
       </div>
-      <div className="mt-4 overflow-x-auto rounded-lg border bg-white">
+      <SearchBox q={q} perPage={perPage} placeholder="Cari NIM, nama, akun, email, HP, jurusan, atau skema..." />
+      <div className="mt-4 grid gap-3 md:hidden">
+        {rows.map((r) => (
+          <section key={r.id.toString()} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-semibold text-[#285aae]">{r.nim ?? "Belum ada NIM"}</div>
+            <div className="mt-1 font-semibold text-slate-900">{r.name}</div>
+            <dl className="mt-3 grid gap-2 text-sm">
+              <div>
+                <dt className="text-xs text-slate-500">Jurusan/Skema</dt>
+                <dd>{r.user.jurusan?.namaJurusan ?? "-"}</dd>
+                <dd className="text-xs text-slate-500">{r.user.skema?.namaSkema ?? "-"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Asesor</dt>
+                <dd>
+                  {r.asesorLinks.length ? (
+                    <ol className="list-decimal space-y-1 pl-5">
+                      {r.asesorLinks.map((link) => (
+                        <li key={link.asesorId.toString()}>{link.asesor.name}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    "-"
+                  )}
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-3 grid gap-2">
+              <Link href={`/mahasiswa?edit=${r.id}`} className={`${buttonClass} w-full`}>
+                Edit
+              </Link>
+              <form action={deleteMahasiswa}>
+                <input type="hidden" name="id" value={r.id.toString()} />
+                <button className={`${dangerClass} w-full`}>Hapus</button>
+              </form>
+            </div>
+          </section>
+        ))}
+        {!rows.length && (
+          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+            Belum ada data.
+          </div>
+        )}
+      </div>
+      <div className="mt-4 hidden overflow-x-auto rounded-lg border bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left">
             <tr>
@@ -180,14 +277,22 @@ export default async function Page({
                       {r.user.skema?.namaSkema ?? "-"}
                     </span>
                   </td>
-                <td className="p-3">
-                  {r.asesorLinks.map((link) => link.asesor.name).join(", ") || "-"}
+                  <td className="p-3">
+                    {r.asesorLinks.length ? (
+                      <ol className="list-decimal space-y-1 pl-5">
+                        {r.asesorLinks.map((link) => (
+                          <li key={link.asesorId.toString()}>{link.asesor.name}</li>
+                        ))}
+                      </ol>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="p-3">
-                    <div className="flex gap-2">
+                    <div className="grid gap-2 sm:flex">
                       <Link
                         href={`/mahasiswa?edit=${r.id}`}
-                        className={buttonClass}
+                        className={`${buttonClass} w-full sm:w-auto`}
                       >
                         Edit
                       </Link>
@@ -197,7 +302,7 @@ export default async function Page({
                           name="id"
                           value={r.id.toString()}
                         />
-                        <button className={dangerClass}>Hapus aman</button>
+                        <button className={`${dangerClass} w-full sm:w-auto`}>Hapus</button>
                       </form>
                     </div>
                   </td>
@@ -208,6 +313,7 @@ export default async function Page({
           </tbody>
         </table>
       </div>
+      <Pagination page={page} perPage={perPage} total={total} q={q} />
     </>
   );
 }

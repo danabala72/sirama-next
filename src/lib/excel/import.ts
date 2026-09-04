@@ -191,7 +191,9 @@ async function importRow(
     const kodeMk = text(row.kode_mk),
       namaMk = text(row.nama_mk);
     if (!kodeMk || !namaMk) throw new Error("kode_mk dan nama_mk wajib diisi.");
-    const existing = await prisma.mataKuliah.findFirst({ where: { kodeMk } });
+    const existing = await prisma.mataKuliah.findFirst({
+      where: { jurusanId: jurusan.id, kodeMk },
+    });
     const data = {
       jurusanId: jurusan.id,
       kodeMk,
@@ -220,6 +222,11 @@ async function importRow(
     const schemes = await prisma.skema.findMany({
       where: { jurusanId: jurusan.id, namaSkema: { in: schemeNames } },
     });
+    const missingSchemes = schemeNames.filter(
+      (name) => !schemes.some((scheme) => scheme.namaSkema === name),
+    );
+    if (missingSchemes.length)
+      throw new Error(`Skema tidak ditemukan: ${missingSchemes.join(", ")}.`);
     for (const scheme of schemes)
       await prisma.skemaMataKuliah.upsert({
         where: {

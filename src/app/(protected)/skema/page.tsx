@@ -1,10 +1,13 @@
 import {
   EmptyRow,
   Notice,
+  Pagination,
   PageHeader,
+  SearchBox,
   buttonClass,
   dangerClass,
   inputClass,
+  readListParams,
 } from "@/components/admin-ui";
 import { FormModal } from "@/components/form-modal";
 import { requireManager } from "@/lib/admin/access";
@@ -13,13 +16,31 @@ import { deleteSkema, saveSkema } from "../admin-actions";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string; edit?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    edit?: string;
+    q?: string;
+    page?: string;
+    perPage?: string;
+  }>;
 }) {
   const a = await requireManager(),
-    { notice, edit } = await searchParams;
-  const scope =
-    a.role === "AdminJurusan" ? { jurusanId: a.jurusanIdBigInt! } : undefined;
-  const [rows, jurusan] = await Promise.all([
+    params = await searchParams,
+    { notice, edit } = params,
+    { q, page, perPage, skip, take } = readListParams(params);
+  const scope = {
+    ...(a.role === "AdminJurusan" ? { jurusanId: a.jurusanIdBigInt! } : {}),
+    ...(q
+      ? {
+          OR: [
+            { namaSkema: { contains: q } },
+            { deskripsi: { contains: q } },
+            { jurusan: { namaJurusan: { contains: q } } },
+          ],
+        }
+      : {}),
+  };
+  const [rows, total, jurusan] = await Promise.all([
     prisma.skema.findMany({
       where: scope,
       include: {
@@ -27,7 +48,10 @@ export default async function Page({
         _count: { select: { users: true, mataKuliah: true } },
       },
       orderBy: { namaSkema: "asc" },
+      skip,
+      take,
     }),
+    prisma.skema.count({ where: scope }),
     prisma.jurusan.findMany({
       where: a.role === "AdminJurusan" ? { id: a.jurusanIdBigInt! } : undefined,
       orderBy: { namaJurusan: "asc" },
@@ -43,13 +67,14 @@ export default async function Page({
         description="Skema RPL dibatasi sesuai jurusan pengelola."
       />
       <Notice text={notice} />
-      <div className="flex justify-end">
+      <div className="mb-3 grid gap-2 sm:flex sm:justify-end">
         <FormModal
           modalId="skema-form"
           key={current?.id.toString() ?? "new"}
           title={current ? "Edit Skema" : "Tambah Skema"}
           triggerLabel={current ? "Edit Skema" : "Tambah Skema"}
           initialOpen={Boolean(current)}
+          triggerClassName="w-full sm:w-auto"
         >
           <form action={saveSkema} className="grid gap-3 md:grid-cols-4">
             <input
@@ -88,7 +113,40 @@ export default async function Page({
           </form>
         </FormModal>
       </div>
-      <div className="mt-4 overflow-x-auto rounded-lg border bg-white">
+      <SearchBox q={q} perPage={perPage} placeholder="Cari skema, deskripsi, atau jurusan..." />
+      <div className="mt-4 grid gap-3 md:hidden">
+        {rows.map((r) => (
+          <section key={r.id.toString()} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="font-semibold text-slate-900">{r.namaSkema}</div>
+            <div className="mt-1 text-xs text-slate-500">{r.deskripsi}</div>
+            <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <dt className="text-xs text-slate-500">Jurusan</dt>
+                <dd>{r.jurusan.namaJurusan}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Relasi</dt>
+                <dd>{r._count.mataKuliah} MK · {r._count.users} pengguna</dd>
+              </div>
+            </dl>
+            <div className="mt-3 grid gap-2">
+              <Link href={`/skema?edit=${r.id}`} className={`${buttonClass} w-full`}>
+                Edit
+              </Link>
+              <form action={deleteSkema}>
+                <input type="hidden" name="id" value={r.id.toString()} />
+                <button className={`${dangerClass} w-full`}>Hapus</button>
+              </form>
+            </div>
+          </section>
+        ))}
+        {!rows.length && (
+          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+            Belum ada data.
+          </div>
+        )}
+      </div>
+      <div className="mt-4 hidden overflow-x-auto rounded-lg border bg-white md:block">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left">
             <tr>
@@ -110,13 +168,13 @@ export default async function Page({
                   {r._count.mataKuliah} MK · {r._count.users} pengguna
                 </td>
                 <td className="p-3">
-                  <div className="flex gap-2">
-                    <Link href={`/skema?edit=${r.id}`} className={buttonClass}>
+                  <div className="grid gap-2 sm:flex">
+                    <Link href={`/skema?edit=${r.id}`} className={`${buttonClass} w-full sm:w-auto`}>
                       Edit
                     </Link>
                     <form action={deleteSkema}>
                       <input type="hidden" name="id" value={r.id.toString()} />
-                      <button className={dangerClass}>Hapus aman</button>
+                      <button className={`${dangerClass} w-full sm:w-auto`}>Hapus</button>
                     </form>
                   </div>
                 </td>
@@ -126,6 +184,7 @@ export default async function Page({
           </tbody>
         </table>
       </div>
+      <Pagination page={page} perPage={perPage} total={total} q={q} />
     </>
   );
 }

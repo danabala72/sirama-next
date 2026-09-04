@@ -299,7 +299,7 @@ export async function saveMataKuliah(fd: FormData) {
     await fail(path, e);
   }
 }
-export async function deactivateMataKuliah(fd: FormData) {
+export async function toggleMataKuliahStatus(fd: FormData) {
   const path = "/mata-kuliah";
   try {
     const a = await requireManager();
@@ -309,9 +309,14 @@ export async function deactivateMataKuliah(fd: FormData) {
     assertJurusan(a, row.jurusanId);
     await prisma.mataKuliah.update({
       where: { id: row.id },
-      data: { status: false },
+      data: { status: !row.status },
     });
-    await done(path, "Mata kuliah dinonaktifkan tanpa menghapus riwayat.");
+    await done(
+      path,
+      row.status
+        ? "Mata kuliah dinonaktifkan tanpa menghapus riwayat."
+        : "Mata kuliah diaktifkan.",
+    );
   } catch (e) {
     await fail(path, e);
   }
@@ -331,6 +336,113 @@ async function editableCpmkOffering(
   return offering;
 }
 
+function actionError(error: unknown) {
+  return error instanceof Error ? error.message : "Operasi gagal.";
+}
+
+async function cpmkItemsForCourse(actor: Awaited<ReturnType<typeof requireManager>>, courseId: bigint) {
+  const course = await prisma.mataKuliah.findUniqueOrThrow({
+    where: { id: courseId },
+    include: {
+      semester: {
+        where: { semester: { isActive: true } },
+        include: {
+          semester: true,
+          capaian: { orderBy: { id: "asc" } },
+        },
+      },
+    },
+  });
+  assertJurusan(actor, course.jurusanId);
+  const activeOffering = course.semester[0];
+  if (!activeOffering)
+    throw new Error("Mata kuliah ini belum ditawarkan pada semester aktif.");
+  return activeOffering.capaian.map((item) => ({
+    id: item.id.toString(),
+    indikatorCapaian: item.indikatorCapaian,
+  }));
+}
+
+export async function getCpmkItems(mataKuliahId: string) {
+  try {
+    const actor = await requireManager();
+    return {
+      ok: true as const,
+      items: await cpmkItemsForCourse(actor, BigInt(mataKuliahId)),
+    };
+  } catch (e) {
+    return { ok: false as const, message: actionError(e) };
+  }
+}
+
+export async function saveCpmkInline(fd: FormData) {
+  try {
+    const actor = await requireManager();
+    const indicator = s(fd, "indikatorCapaian");
+    if (!indicator) throw new Error("Indikator capaian wajib diisi.");
+
+    const offeringId = id(fd, "mataKuliahSemesterId");
+    await editableCpmkOffering(actor, offeringId);
+    const key = s(fd, "id");
+    let row: { id: bigint; indikatorCapaian: string };
+    if (key) {
+      const current = await prisma.cpMataKuliah.findUniqueOrThrow({
+        where: { id: BigInt(key) },
+      });
+      if (current.mataKuliahSemesterId !== offeringId)
+        throw new Error("CPMK tidak sesuai dengan mata kuliah yang dipilih.");
+      row = await prisma.cpMataKuliah.update({
+        where: { id: current.id },
+        data: { indikatorCapaian: indicator },
+      });
+    } else {
+      const duplicate = await prisma.cpMataKuliah.findFirst({
+        where: {
+          mataKuliahSemesterId: offeringId,
+          indikatorCapaian: indicator,
+        },
+      });
+      if (duplicate) throw new Error("Indikator CPMK yang sama sudah tersedia.");
+      row = await prisma.cpMataKuliah.create({
+        data: {
+          mataKuliahSemesterId: offeringId,
+          indikatorCapaian: indicator,
+        },
+      });
+    }
+    revalidatePath("/mata-kuliah");
+    return {
+      ok: true as const,
+      message: key ? "CPMK berhasil diperbarui." : "CPMK berhasil ditambahkan.",
+      item: {
+        id: row.id.toString(),
+        indikatorCapaian: row.indikatorCapaian,
+      },
+    };
+  } catch (e) {
+    return { ok: false as const, message: actionError(e) };
+  }
+}
+
+export async function deleteCpmkInline(fd: FormData) {
+  try {
+    const actor = await requireManager();
+    const row = await prisma.cpMataKuliah.findUniqueOrThrow({
+      where: { id: id(fd) },
+    });
+    await editableCpmkOffering(actor, row.mataKuliahSemesterId);
+    await prisma.cpMataKuliah.delete({ where: { id: row.id } });
+    revalidatePath("/mata-kuliah");
+    return {
+      ok: true as const,
+      message: "CPMK berhasil dihapus.",
+      id: row.id.toString(),
+    };
+  } catch (e) {
+    return { ok: false as const, message: actionError(e) };
+  }
+}
+
 export async function saveCpmk(fd: FormData) {
   const path = "/mata-kuliah";
   try {
@@ -339,7 +451,7 @@ export async function saveCpmk(fd: FormData) {
     if (!indicator) throw new Error("Indikator capaian wajib diisi.");
 
     const offeringId = id(fd, "mataKuliahSemesterId");
-    const offering = await editableCpmkOffering(actor, offeringId);
+    await editableCpmkOffering(actor, offeringId);
     const key = s(fd, "id");
     if (key) {
       const current = await prisma.cpMataKuliah.findUniqueOrThrow({
@@ -366,13 +478,9 @@ export async function saveCpmk(fd: FormData) {
         },
       });
     }
-    await done(
-      `${path}?cpmk=${offering.mataKuliahId.toString()}`,
-      key ? "CPMK berhasil diperbarui." : "CPMK berhasil ditambahkan.",
-    );
+    await done(path, key ? "CPMK berhasil diperbarui." : "CPMK berhasil ditambahkan.");
   } catch (e) {
-    const courseId = s(fd, "mataKuliahId");
-    await fail(`${path}${courseId ? `?cpmk=${courseId}` : ""}`, e);
+    await fail(path, e);
   }
 }
 
@@ -383,18 +491,14 @@ export async function deleteCpmk(fd: FormData) {
     const row = await prisma.cpMataKuliah.findUniqueOrThrow({
       where: { id: id(fd) },
     });
-    const offering = await editableCpmkOffering(
+    await editableCpmkOffering(
       actor,
       row.mataKuliahSemesterId,
     );
     await prisma.cpMataKuliah.delete({ where: { id: row.id } });
-    await done(
-      `${path}?cpmk=${offering.mataKuliahId.toString()}`,
-      "CPMK berhasil dihapus.",
-    );
+    await done(path, "CPMK berhasil dihapus.");
   } catch (e) {
-    const courseId = s(fd, "mataKuliahId");
-    await fail(`${path}${courseId ? `?cpmk=${courseId}` : ""}`, e);
+    await fail(path, e);
   }
 }
 

@@ -8,14 +8,16 @@ export type ModalValues = Record<string, string | boolean | string[]>;
 export function ModalEditButton({
   modalId,
   values,
+  className = "",
 }: {
   modalId: string;
   values: ModalValues;
+  className?: string;
 }) {
   return (
-    <button
-      type="button"
-      className="rounded bg-[#285aae] px-4 py-2 text-sm font-semibold text-white hover:bg-[#214b97]"
+      <button
+        type="button"
+        className={`inline-flex min-h-9 items-center justify-center rounded bg-[#285aae] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#214b97] ${className}`}
       onClick={() =>
         window.dispatchEvent(
           new CustomEvent("open-form-modal", { detail: { modalId, values } }),
@@ -33,6 +35,8 @@ export function FormModal({
   triggerLabel,
   initialOpen = false,
   disabled = false,
+  dialogClassName = "max-w-3xl",
+  triggerClassName = "",
   children,
 }: {
   title: string;
@@ -40,6 +44,8 @@ export function FormModal({
   triggerLabel: string;
   initialOpen?: boolean;
   disabled?: boolean;
+  dialogClassName?: string;
+  triggerClassName?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(initialOpen);
@@ -93,7 +99,7 @@ export function FormModal({
     <>
       <button
         type="button"
-        className="rounded bg-[#285aae] px-4 py-2 text-sm font-semibold text-white hover:bg-[#214b97] disabled:cursor-not-allowed disabled:opacity-50"
+        className={`inline-flex min-h-9 items-center justify-center rounded bg-[#285aae] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#214b97] disabled:cursor-not-allowed disabled:opacity-50 ${triggerClassName}`}
         onClick={() => {
           setValues(null);
           setOpen(true);
@@ -109,7 +115,7 @@ export function FormModal({
           onMouseDown={() => setOpen(false)}
         >
           <section
-            className="max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl"
+            className={`max-h-[calc(100vh-2rem)] w-full ${dialogClassName} overflow-y-auto rounded-lg bg-white shadow-2xl`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="form-modal-title"
