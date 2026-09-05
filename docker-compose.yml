@@ -29,6 +29,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
     container_name: sirama_next
     restart: unless-stopped
     environment:
@@ -36,6 +38,7 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:-ganti_dengan_random_secret_minimal_32_karakter}
       NODE_ENV: production
       TZ: Asia/Makassar
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
     ports:
       - "${APP_PORT:-3107}:3000"
     volumes:
