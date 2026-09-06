@@ -8,8 +8,8 @@ import {
   CalendarDays,
   GraduationCap,
   Home,
-  Menu,
   LogOut,
+  Menu,
   School,
   Settings,
   ShieldCheck,
@@ -17,7 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { RoleName } from "@/lib/session";
 
 type Item = {
@@ -105,6 +105,23 @@ export function AppShell({
     (item) => !item.roles || item.roles.includes(role),
   );
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
   return (
     <div className="min-h-screen bg-[#eef2f6] text-slate-800">
       <header className="px-2 pt-2 md:px-3 md:pt-3">
@@ -128,8 +145,10 @@ export function AppShell({
               onClick={() => setOpen(!open)}
               className="rounded p-2 hover:bg-white/10 lg:hidden"
               aria-label="Menu"
+              aria-controls="application-sidebar"
+              aria-expanded={open}
             >
-              {open ? <X /> : <Menu />}
+              <Menu />
             </button>
             <span className="hidden text-sm md:inline">
               Selamat datang, <strong>{username}</strong>
@@ -142,10 +161,35 @@ export function AppShell({
           </div>
         </div>
       </header>
-      <div className="grid min-h-[calc(100vh-90px)] lg:grid-cols-[260px_1fr]">
+      <div className="min-h-[calc(100vh-90px)]">
+        {open && (
+          <button
+            type="button"
+            aria-label="Tutup menu"
+            className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[1px] lg:hidden"
+            onClick={() => setOpen(false)}
+          />
+        )}
         <aside
-          className={`${open ? "block" : "hidden"} border-r border-slate-200 bg-white lg:block`}
+          id="application-sidebar"
+          className={`fixed inset-y-0 left-0 z-50 w-[min(82vw,300px)] overflow-y-auto border-r border-slate-200 bg-white shadow-2xl transition-transform duration-200 ease-out lg:bottom-0 lg:top-[90px] lg:z-30 lg:w-[260px] lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"}`}
         >
+          <div className="flex h-[72px] items-center justify-between border-b border-slate-200 bg-[#285aae] px-4 text-white lg:hidden">
+            <div className="flex items-center gap-3">
+              <span className="grid size-9 place-items-center rounded-full border border-white/50">
+                <GraduationCap size={21} />
+              </span>
+              <span className="text-sm font-semibold">Menu SIRAMA</span>
+            </div>
+            <button
+              type="button"
+              className="rounded p-2 hover:bg-white/10"
+              onClick={() => setOpen(false)}
+              aria-label="Tutup menu"
+            >
+              <X size={22} />
+            </button>
+          </div>
           <nav className="space-y-1 p-4">
             {visible.map(({ href, label, icon: Icon }) => {
               const active = pathname === href.split("?")[0];
@@ -163,7 +207,7 @@ export function AppShell({
             })}
           </nav>
         </aside>
-        <main className="min-w-0 p-3 md:p-4">{children}</main>
+        <main className="min-w-0 p-3 md:p-4 lg:ml-[260px]">{children}</main>
       </div>
     </div>
   );
